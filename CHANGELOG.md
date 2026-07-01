@@ -7,6 +7,23 @@ e o projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado
+- Correlação de CVE por CPE (`virtualMatchString` da NVD 2.0), muito mais
+  precisa que a busca por palavra-chave, com fallback automático para keyword
+  quando não há mapeamento de CPE.
+- Paginação completa da NVD (`startIndex`/`resultsPerPage=2000` até
+  `totalResults`), respeitando o rate limit oficial: ~6s entre requisições
+  sem chave e ~0,6s com `--nvd-key`.
+- Flag `--cve-max N` (padrão 500; `0` = todas) para controlar o teto de CVEs.
+- Lista de CVEs sempre exibida no relatório em texto (não só em modo verbose).
+- Campo `cve_details` na saída `--json`: objeto completo por CVE com CVSS
+  (versão, score, severidade, vetor), CWE, descrição integral, referências,
+  status KEV e **versões afetadas** (faixas versionStart/End).
+
+### Corrigido
+- Mapeamento de CPE do nginx atualizado para `f5:nginx` (vendor atual na NVD).
+- Contagem de CVEs agora reflete o total real (`totalResults`), não o teto.
+
 ## [1.0.0] - 2026-07-01
 
 ### Adicionado

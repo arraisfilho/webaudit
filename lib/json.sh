@@ -29,6 +29,8 @@ json::emit() {
 # json::_emit_jq - constrói o JSON via jq a partir de pares chave=valor.
 json::_emit_jq() {
   local host="$1" elapsed="$2" k
+  local details="${WEBAUDIT_CVE_JSON:-}"
+  [[ -n "${details}" ]] || details="null"
   {
     printf '%s\n' "host	${host}"
     printf '%s\n' "elapsed_seconds	${elapsed}"
@@ -36,10 +38,10 @@ json::_emit_jq() {
     for k in "${WEBAUDIT_RESULT_ORDER[@]}"; do
       printf '%s\t%s\n' "${k}" "${WEBAUDIT_RESULT[$k]}"
     done
-  } | jq -R -s '
+  } | jq -R -s --argjson cve "${details}" '
     split("\n") | map(select(length>0)) |
     map(. / "\t") | map({key: .[0], value: (.[1:] | join("\t"))}) |
-    from_entries
+    from_entries | . + {cve_details: $cve}
   '
 }
 
@@ -56,5 +58,6 @@ json::_emit_manual() {
     [[ ${first} -eq 1 ]] && first=0 || printf ',\n'
     printf '    "%s": "%s"' "${k}" "${v}"
   done
-  printf '\n  }\n}\n'
+  printf '\n  },\n'
+  printf '  "cve_details": %s\n}\n' "${WEBAUDIT_CVE_JSON:-null}"
 }

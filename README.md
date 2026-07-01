@@ -162,6 +162,7 @@ OPÇÕES:
       --proxy URL        Proxy para HTTP/HTTPS (curl -x)
       --no-cache         Desabilita cache local
       --no-cve           Desabilita consulta de CVEs
+      --cve-max N        Máximo de CVEs listadas (0 = todas; padrão: 500)
       --nvd-key KEY      API key para a NVD (NIST)
       --github-token TOK Token para GitHub Security Advisories
 
@@ -228,12 +229,20 @@ de versão) ou ser passadas por flag.
 - **[endoflife.date](https://endoflife.date)** — versão mais recente de cada
   produto para a comparação de atualização.
 - **[NVD 2.0](https://services.nvd.nist.gov/rest/json/cves/2.0)** — base de
-  CVEs do NIST. Sem chave: limite reduzido de requisições; com `--nvd-key`,
-  limite maior. Solicite uma chave gratuita em nvd.nist.gov.
-- **[OSV.dev](https://osv.dev)** — vulnerabilidades por ecossistema/pacote.
+  CVEs do NIST. A correlação é feita por **CPE** (`virtualMatchString`), que é
+  precisa e sensível à versão; se não houver mapeamento de CPE para o software,
+  cai para busca por palavra-chave. Os resultados são **paginados** por
+  completo (`resultsPerPage=2000` + `startIndex` até `totalResults`),
+  respeitando o rate limit oficial: ~6s entre requisições sem chave e ~0,6s
+  com `--nvd-key`. Use `--cve-max N` para limitar (0 = todas). Solicite uma
+  chave gratuita em nvd.nist.gov.
+- **[OSV.dev](https://osv.dev)** — vulnerabilidades por ecossistema/pacote
+  (fonte auxiliar).
 
-Todas as respostas são armazenadas em cache local com TTL para reduzir
-chamadas repetidas.
+O total exibido reflete o `totalResults` real da NVD. A saída `--json` inclui
+`cve_details` com o objeto completo de cada CVE (CVSS, CWE, descrição,
+referências, status KEV e as **versões afetadas**). Todas as respostas são
+armazenadas em cache local com TTL para reduzir chamadas repetidas.
 
 ## Arquitetura
 
@@ -301,7 +310,7 @@ a porta HTTPS pode ser ajustada com `-P`.
 
 - Descoberta e teste de HTTP/3 (QUIC) quando o `curl` suportar.
 - Verificação de CAA e DNSSEC.
-- Correlação de CVE por CPE além de busca por palavra-chave.
+- Ampliar o mapa de CPE para mais servidores e correlação por `cpeName` exato.
 - Saída SARIF para integração com plataformas de segurança.
 - Paralelização opcional no modo scanner.
 

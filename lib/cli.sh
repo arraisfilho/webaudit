@@ -24,6 +24,8 @@ WEBAUDIT_VERSION="1.0.0"
 : "${WEBAUDIT_QUIET:=0}"
 : "${WEBAUDIT_CACHE_ENABLED:=1}"
 : "${WEBAUDIT_CVE_ENABLED:=1}"
+: "${WEBAUDIT_CVE_MAX:=500}"      # teto de CVEs listadas (0 = ilimitado)
+: "${WEBAUDIT_NVD_PAGE:=2000}"    # resultsPerPage da NVD (máx. permitido)
 : "${WEBAUDIT_LOG_FILE:=}"
 : "${WEBAUDIT_PROXY:=}"
 
@@ -60,6 +62,7 @@ OPÇÕES:
       --proxy URL        Proxy para HTTP/HTTPS (curl -x)
       --no-cache         Desabilita cache local
       --no-cve           Desabilita consulta de CVEs
+      --cve-max N        Máximo de CVEs listadas (0 = todas; padrão: 500)
       --nvd-key KEY      API key para a NVD (NIST)
       --github-token TOK Token para GitHub Security Advisories
 
@@ -104,6 +107,7 @@ cli::parse() {
       --proxy)         WEBAUDIT_PROXY="$2"; shift 2 ;;
       --no-cache)      WEBAUDIT_CACHE_ENABLED=0; shift ;;
       --no-cve)        WEBAUDIT_CVE_ENABLED=0; shift ;;
+      --cve-max)       WEBAUDIT_CVE_MAX="$2"; shift 2 ;;
       --nvd-key)       WEBAUDIT_NVD_API_KEY="$2"; shift 2 ;;
       --github-token)  WEBAUDIT_GITHUB_TOKEN="$2"; shift 2 ;;
       --log)           WEBAUDIT_LOG_FILE="$2"; shift 2 ;;
@@ -129,6 +133,7 @@ cli::parse() {
 
   export WEBAUDIT_OUTPUT WEBAUDIT_PORT_HTTP WEBAUDIT_PORT_HTTPS WEBAUDIT_TIMEOUT
   export WEBAUDIT_USER_AGENT WEBAUDIT_PROXY WEBAUDIT_CACHE_ENABLED WEBAUDIT_CVE_ENABLED
+  export WEBAUDIT_CVE_MAX WEBAUDIT_NVD_PAGE
   export WEBAUDIT_VERBOSE WEBAUDIT_QUIET WEBAUDIT_LOG_FILE
 }
 
@@ -139,6 +144,7 @@ cli::validate() {
     *) utils::die "Formato de saída inválido: ${WEBAUDIT_OUTPUT}" ;;
   esac
   [[ "${WEBAUDIT_TIMEOUT}" =~ ^[0-9]+$ ]] || utils::die "Timeout inválido: ${WEBAUDIT_TIMEOUT}"
+  [[ "${WEBAUDIT_CVE_MAX}" =~ ^[0-9]+$ ]] || utils::die "Valor inválido para --cve-max: ${WEBAUDIT_CVE_MAX}"
 
   if [[ -z "${WEBAUDIT_HOSTFILE}" && ${#WEBAUDIT_TARGETS[@]} -eq 0 ]]; then
     cli::usage

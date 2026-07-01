@@ -101,6 +101,14 @@ report::text() {
   printf '\n'
 
   report::_row "CVEs" "$(utils::result_get cve.status)"
+  # Lista detalhada sempre que houver CVEs (independe do modo verbose).
+  if utils::result_has cve.list; then
+    local _cve_line
+    while IFS= read -r _cve_line; do
+      [[ -n "${_cve_line}" ]] || continue
+      printf '  %b%s%b\n' "${C_GRAY}" "${_cve_line}" "${C_RESET}"
+    done <<< "$(utils::result_get cve.list)"
+  fi
   printf '\n'
 
   report::_row "Tempo" "${elapsed} segundos"
@@ -121,11 +129,6 @@ report::_verbose_block() {
   for k in "${WEBAUDIT_RESULT_ORDER[@]}"; do
     printf '%b%-26s%b %s\n' "${C_GRAY}" "${k}" "${C_RESET}" "${WEBAUDIT_RESULT[$k]}"
   done
-  # Lista de CVEs, se houver.
-  if utils::result_has cve.list; then
-    printf '\n%bCVEs:%b\n' "${C_YELLOW}" "${C_RESET}"
-    printf '%s\n' "$(utils::result_get cve.list)"
-  fi
   printf '\n'
 }
 

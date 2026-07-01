@@ -12,16 +12,23 @@ coletados e a lista completa de CVEs.
 
 ## `--json`
 
-Objeto JSON por host com as chaves `host`, `elapsed_seconds`, `overall` e
-`results` (mapa `modulo.campo` → valor). No modo scanner, a saída é um array
-de objetos. É o formato recomendado para integração com outras ferramentas.
+Objeto JSON por host com as chaves `host`, `elapsed_seconds`, `overall`,
+`results` (mapa `modulo.campo` → valor) e `cve_details`. No modo scanner, a
+saída é um array de objetos. É o formato recomendado para integração com
+outras ferramentas.
+
+O campo `cve_details` traz um array com o objeto completo de cada CVE:
+`id`, `published`, `lastModified`, `status`, `cvss` (version/score/severity/
+vector), `cwe`, `description`, `affected` (faixas de versão afetadas), `kev`,
+`references` e `url`. É a fonte com o máximo de detalhe.
 
 ```json
 {
   "host": "example.com",
   "elapsed_seconds": "2.00",
   "overall": "WARNING",
-  "results": { "dns.ipv4": "...", "tls.negotiated": "TLSv1.3", "...": "..." }
+  "results": { "tls.negotiated": "TLSv1.3", "...": "..." },
+  "cve_details": [ { "id": "CVE-2021-23017", "cvss": { "score": 7.7, "severity": "HIGH" }, "affected": [ ... ] } ]
 }
 ```
 

@@ -155,7 +155,39 @@ assert_eq "site.com" "${nh}" "extrai host de host:porta"
 assert_eq "9443" "${np}" "porta extraida junto ao host"
 
 # ---------------------------------------------------------------------------
-section "sintaxe de todos os arquivos (bash -n)"
+section "cve::_cpe / _enrich_json (offline)"
+# ---------------------------------------------------------------------------
+export WEBAUDIT_CVE_MAX=500 WEBAUDIT_NVD_PAGE=2000
+# shellcheck source=/dev/null
+source "${LIB}/http.sh"
+# shellcheck source=/dev/null
+source "${LIB}/cve.sh"
+assert_eq "cpe:2.3:a:f5:nginx:1.20.0" "$(cve::_cpe nginx 1.20.0)" "cpe nginx -> f5:nginx"
+assert_eq "cpe:2.3:a:apache:http_server:2.4.57" "$(cve::_cpe Apache 2.4.57)" "cpe apache http_server"
+assert_eq "" "$(cve::_cpe softwaredesconhecido 1.0)" "cpe vazio p/ desconhecido (fallback keyword)"
+
+if utils::has jq; then
+  _merged='{"totalResults":2,"vulnerabilities":[{"cve":{"id":"CVE-2021-23017","published":"2021-06-01T00:00Z","lastModified":"2024-01-01T00:00Z","vulnStatus":"Analyzed","metrics":{"cvssMetricV31":[{"cvssData":{"version":"3.1","baseScore":7.7,"baseSeverity":"HIGH","vectorString":"CVSS:3.1/AV:N"}}]},"weaknesses":[{"description":[{"lang":"en","value":"CWE-193"}]}],"descriptions":[{"lang":"en","value":"nginx resolver off-by-one"}],"configurations":[{"nodes":[{"cpeMatch":[{"vulnerable":true,"criteria":"cpe:2.3:a:f5:nginx:*:*:*:*:*:*:*:*","versionEndExcluding":"1.20.1"}]}]}],"references":[{"url":"https://example/adv"}]}},{"cve":{"id":"CVE-2000-0001","published":"2000-01-01T00:00Z","lastModified":"2000-01-01T00:00Z","vulnStatus":"Analyzed","metrics":{"cvssMetricV2":[{"baseSeverity":"LOW","cvssData":{"version":"2.0","baseScore":2.1,"vectorString":"AV:L"}}]},"descriptions":[{"lang":"en","value":"exemplo antigo"}]}}]}'
+  _enr="$(cve::_enrich_json "${_merged}")"
+  assert_eq "2" "$(printf '%s' "${_enr}" | jq 'length')" "enrich mantem 2 CVEs"
+  assert_eq "CVE-2021-23017" "$(printf '%s' "${_enr}" | jq -r '.[0].id')" "enrich ordena por CVSS desc"
+  assert_eq "HIGH" "$(printf '%s' "${_enr}" | jq -r '.[0].cvss.severity')" "enrich extrai severidade v3.1"
+  assert_eq "LOW" "$(printf '%s' "${_enr}" | jq -r '.[1].cvss.severity')" "enrich extrai severidade v2"
+  assert_eq "1.20.1" "$(printf '%s' "${_enr}" | jq -r '.[0].affected[0].versionEndExcluding')" "enrich traz versao afetada"
+  assert_eq "CWE-193" "$(printf '%s' "${_enr}" | jq -r '.[0].cwe[0]')" "enrich traz CWE"
+  # recorte pelo teto
+  WEBAUDIT_CVE_MAX=1
+  assert_eq "1" "$(cve::_enrich_json "${_merged}" | jq 'length')" "cve-max recorta a lista"
+  WEBAUDIT_CVE_MAX=500
+  # linha de texto no formato esperado
+  _line="$(cve::_text_from_json "${_enr}" | head -n1)"
+  assert_contains "CVE-2021-23017" "${_line}" "texto contem o CVE-ID"
+  assert_contains "CVSS 7.7" "${_line}" "texto contem CVSS"
+else
+  printf '  (jq ausente - testes de enriquecimento pulados)\n'
+fi
+
+
 # ---------------------------------------------------------------------------
 for f in "${ROOT}/webaudit.sh" "${LIB}"/*.sh; do
   if bash -n "${f}" 2>/dev/null; then _ok "sintaxe $(basename "${f}")"; else _no "sintaxe $(basename "${f}")"; fi
