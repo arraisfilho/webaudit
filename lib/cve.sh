@@ -241,6 +241,7 @@ cve::_enrich_json() {
 }
 
 # cve::_text_from_json <enriched> - linhas TSV para o relatório em texto.
+# Sem a descrição (que polui o terminal); o texto completo fica no --json.
 cve::_text_from_json() {
   printf '%s' "$1" | jq -r '
     .[] | [
@@ -248,8 +249,7 @@ cve::_text_from_json() {
       "CVSS \(.cvss.score // "N/A")",
       (.cvss.severity // "N/A"),
       .published,
-      .url,
-      (.description[0:140])
+      .url
     ] | @tsv
   ' 2>/dev/null || true
 }

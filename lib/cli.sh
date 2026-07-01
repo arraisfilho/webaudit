@@ -12,7 +12,7 @@ if [[ -n "${__WEBAUDIT_CLI_LOADED:-}" ]]; then
 fi
 __WEBAUDIT_CLI_LOADED=1
 
-WEBAUDIT_VERSION="1.0.0"
+WEBAUDIT_VERSION="1.1.0"
 
 # Valores padrão (podem ser sobrescritos por config.conf e depois por flags).
 : "${WEBAUDIT_TIMEOUT:=10}"

@@ -5,7 +5,7 @@ HTTP/HTTPS, TLS, certificados, cabeçalhos de segurança, identifica o software
 e o sistema operacional do servidor e correlaciona a versão detectada com
 CVEs conhecidas — tudo a partir da linha de comando, sem runtime externo.
 
-[![CI](https://github.com/SEU_USUARIO/webaudit/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/webaudit/actions/workflows/ci.yml)
+[![CI](https://github.com/arraisfilho/webaudit/actions/workflows/ci.yml/badge.svg)](https://github.com/arraisfilho/webaudit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Shell: bash](https://img.shields.io/badge/shell-bash-1f425f.svg)](https://www.gnu.org/software/bash/)
 

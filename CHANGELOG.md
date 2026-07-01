@@ -6,6 +6,9 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
+## [Não lançado]
+
+## [1.1.0] - 2026-07-01
 
 ### Adicionado
 - Correlação de CVE por CPE (`virtualMatchString` da NVD 2.0), muito mais
@@ -20,9 +23,16 @@ e o projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   (versão, score, severidade, vetor), CWE, descrição integral, referências,
   status KEV e **versões afetadas** (faixas versionStart/End).
 
+### Alterado
+- A lista de CVEs em texto passa a omitir a descrição (que poluía o terminal);
+  a descrição completa continua disponível em `cve_details` no `--json`.
+
 ### Corrigido
 - Mapeamento de CPE do nginx atualizado para `f5:nginx` (vendor atual na NVD).
 - Contagem de CVEs agora reflete o total real (`totalResults`), não o teto.
+- `versions::_cmp` deixa de retornar `-1` (interpretado como opção por
+  `printf` em alguns shells), passando a usar `lt`/`eq`/`gt`. Corrige o erro
+  "printf: -1: invalid option" e o campo Status vazio na comparação de versão.
 
 ## [1.0.0] - 2026-07-01
 
@@ -52,5 +62,6 @@ e o projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Suíte de testes (`tests/run_tests.sh`) e integração contínua com
   ShellCheck e execução dos testes.
 
-[Não lançado]: https://github.com/SEU_USUARIO/webaudit/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/SEU_USUARIO/webaudit/releases/tag/v1.0.0
+[Não lançado]: https://github.com/arraisfilho/webaudit/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/arraisfilho/webaudit/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/arraisfilho/webaudit/releases/tag/v1.0.0

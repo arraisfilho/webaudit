@@ -64,13 +64,14 @@ versions::_fetch_latest() {
   printf '%s' "${latest}"
 }
 
-# versions::_cmp <a> <b> - compara versões semânticas. Ecoa: -1,0,1.
+# versions::_cmp <a> <b> - compara versões. Ecoa: lt (a<b), eq (a==b), gt (a>b).
+# Evita retornar "-1" (que alguns printf/shells tratam como opção).
 versions::_cmp() {
   local a="$1" b="$2"
-  [[ "${a}" == "${b}" ]] && { printf '0'; return; }
+  [[ "${a}" == "${b}" ]] && { printf '%s' 'eq'; return; }
   local hi
   hi="$(printf '%s\n%s\n' "${a}" "${b}" | sort -V | tail -n1)"
-  if [[ "${hi}" == "${a}" ]]; then printf '1'; else printf '-1'; fi
+  if [[ "${hi}" == "${a}" ]]; then printf '%s' 'gt'; else printf '%s' 'lt'; fi
 }
 
 # versions::run <host> - executa a comparação.
@@ -104,8 +105,9 @@ versions::run() {
   utils::result_set version.latest "${latest}"
   local cmp; cmp="$(versions::_cmp "${ver}" "${latest}")"
   case "${cmp}" in
-    0)  utils::result_set version.status "Atualizado" ;;
-    1)  utils::result_set version.status "Versao mais recente que a base (pre-release?)" ;;
-    -1) utils::result_set version.status "Atualizacao recomendada" ;;
+    eq) utils::result_set version.status "Atualizado" ;;
+    gt) utils::result_set version.status "Versao mais recente que a base (pre-release?)" ;;
+    lt) utils::result_set version.status "Atualizacao recomendada" ;;
+    *)  utils::result_set version.status "Comparacao indisponivel" ;;
   esac
 }
