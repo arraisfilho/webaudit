@@ -74,7 +74,7 @@ CVEs conhecidas — tudo a partir da linha de comando, sem runtime externo.
 ### Via `make`
 
 ```sh
-git clone https://github.com/filhoarrais/webaudit.git
+git clone https://github.com/arraisfilho/webaudit.git
 cd webaudit
 sudo make install          # instala em /usr/local (PREFIX ajustável)
 webaudit exemplo.com
@@ -85,7 +85,7 @@ Para desinstalar: `sudo make uninstall`.
 ### Execução direta (sem instalar)
 
 ```sh
-git clone https://github.com/filhoarrais/webaudit.git
+git clone https://github.com/arraisfilho/webaudit.git
 cd webaudit
 ./webaudit.sh exemplo.com
 ```
