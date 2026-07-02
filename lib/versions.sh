@@ -38,7 +38,8 @@ versions::_fetch_latest() {
   local slug="$1" detected="$2"
   local body
   if ! body="$(utils::cache_get versions "eol:${slug}")"; then
-    local -a opts; http::_curl_base opts
+    http::_curl_base
+    local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
     body="$(curl "${opts[@]}" "${WEBAUDIT_EOL_API}/${slug}.json" 2>/dev/null || true)"
     [[ -n "${body}" ]] && utils::cache_set versions "eol:${slug}" 86400 "${body}"
   fi

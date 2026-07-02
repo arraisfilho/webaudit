@@ -252,32 +252,51 @@ utils::cache_set() {
 # Result store (chave -> valor)
 # ---------------------------------------------------------------------------
 # Guarda os achados de forma ordenada para os módulos de saída.
-# Requer bash >= 4 (associative arrays). Também mantém ordem de inserção.
+# Implementado com arrays indexados para funcionar no Bash 3.2 do macOS.
 
-declare -gA WEBAUDIT_RESULT=()
-declare -ga WEBAUDIT_RESULT_ORDER=()
+declare -a WEBAUDIT_RESULT_ORDER=()
+declare -a WEBAUDIT_RESULT_VALUES=()
 
 utils::result_reset() {
-  WEBAUDIT_RESULT=()
   WEBAUDIT_RESULT_ORDER=()
+  WEBAUDIT_RESULT_VALUES=()
+}
+
+# utils::_result_index <chave> - imprime o índice da chave no store.
+utils::_result_index() {
+  local key="$1" i
+  for (( i=0; i<${#WEBAUDIT_RESULT_ORDER[@]}; i++ )); do
+    if [[ "${WEBAUDIT_RESULT_ORDER[$i]}" == "${key}" ]]; then
+      printf '%s' "${i}"
+      return 0
+    fi
+  done
+  return 1
 }
 
 # utils::result_set <chave> <valor>
 utils::result_set() {
   local key="$1"; shift
-  local val="$*"
-  if [[ -z "${WEBAUDIT_RESULT[${key}]+x}" ]]; then
+  local val="$*" idx
+  if idx="$(utils::_result_index "${key}")"; then
+    WEBAUDIT_RESULT_VALUES[idx]="${val}"
+  else
     WEBAUDIT_RESULT_ORDER+=("${key}")
+    WEBAUDIT_RESULT_VALUES+=("${val}")
   fi
-  WEBAUDIT_RESULT[${key}]="${val}"
 }
 
 # utils::result_get <chave> - imprime valor (ou vazio).
 utils::result_get() {
-  printf '%s' "${WEBAUDIT_RESULT[$1]:-}"
+  local idx
+  if idx="$(utils::_result_index "$1")"; then
+    printf '%s' "${WEBAUDIT_RESULT_VALUES[$idx]}"
+  fi
 }
 
 # utils::result_has <chave> - retorna 0 se existe e não é vazio.
 utils::result_has() {
-  [[ -n "${WEBAUDIT_RESULT[$1]:-}" ]]
+  local idx
+  idx="$(utils::_result_index "$1")" || return 1
+  [[ -n "${WEBAUDIT_RESULT_VALUES[$idx]}" ]]
 }

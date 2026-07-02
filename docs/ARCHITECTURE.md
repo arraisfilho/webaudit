@@ -11,6 +11,7 @@ participa do pipeline de coleta) além de funções internas prefixadas com `_`.
 main
  ├─ load_config            (config.conf; flags têm precedência)
  ├─ cli::parse / validate  (interpreta argumentos)
+ ├─ deps::check_runtime    (valida dependências e sugere instalação)
  └─ para cada alvo:
      audit_one
       ├─ normalize_target  (host[:porta], remove esquema/caminho)
@@ -35,6 +36,7 @@ main
 | `colors.sh`        | Cores ANSI; respeita `NO_COLOR` e ausência de TTY.          |
 | `utils.sh`         | Plataforma, tempo, timeout, escapes, logging, cache, store. |
 | `cli.sh`           | Versão, ajuda, parsing e validação de argumentos.           |
+| `deps.sh`          | Checagem de dependências e instruções de instalação.        |
 | `dns.sh`           | Resolução A/AAAA/CNAME/MX/TXT/NS/PTR e detecção de CDN.      |
 | `tcp.sh`           | Conectividade nas portas HTTP/HTTPS e latência.             |
 | `http.sh`          | Requisições, redirecionamentos, métodos, HTTP/2 e HTTP/3.   |
@@ -63,6 +65,10 @@ As chaves seguem o padrão `modulo.campo` (ex.: `tls.negotiated`,
 `cert.days_left`, `sec.score`). Alguns dumps brutos reaproveitados entre
 módulos são expostos como variáveis globais (`WEBAUDIT_RAW_HEADERS`,
 `WEBAUDIT_TLS_DUMP`, `WEBAUDIT_CERT_PEM`) para evitar novas conexões.
+
+Internamente, o store usa arrays indexados paralelos (`chave` e `valor`) em
+vez de arrays associativos. Isso preserva a ordem de inserção e mantém
+compatibilidade com o Bash 3.2 distribuído por padrão no macOS.
 
 ## Tratamento de erros
 

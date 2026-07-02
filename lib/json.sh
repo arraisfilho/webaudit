@@ -32,16 +32,23 @@ json::_emit_jq() {
   local details="${WEBAUDIT_CVE_JSON:-}"
   [[ -n "${details}" ]] || details="null"
   {
-    printf '%s\n' "host	${host}"
-    printf '%s\n' "elapsed_seconds	${elapsed}"
-    printf '%s\n' "overall	$(report::overall)"
     for k in "${WEBAUDIT_RESULT_ORDER[@]}"; do
-      printf '%s\t%s\n' "${k}" "${WEBAUDIT_RESULT[$k]}"
+      printf '%s\t%s\n' "${k}" "$(utils::result_get "${k}")"
     done
-  } | jq -R -s --argjson cve "${details}" '
+  } | jq -R -s \
+    --arg host "${host}" \
+    --arg elapsed "${elapsed}" \
+    --arg overall "$(report::overall)" \
+    --argjson cve "${details}" '
     split("\n") | map(select(length>0)) |
     map(. / "\t") | map({key: .[0], value: (.[1:] | join("\t"))}) |
-    from_entries | . + {cve_details: $cve}
+    {
+      host: $host,
+      elapsed_seconds: $elapsed,
+      overall: $overall,
+      results: from_entries,
+      cve_details: $cve
+    }
   '
 }
 
@@ -54,7 +61,7 @@ json::_emit_manual() {
   printf '  "overall": "%s",\n' "$(report::overall)"
   printf '  "results": {\n'
   for k in "${WEBAUDIT_RESULT_ORDER[@]}"; do
-    v="$(utils::json_escape "${WEBAUDIT_RESULT[$k]}")"
+    v="$(utils::json_escape "$(utils::result_get "${k}")")"
     [[ ${first} -eq 1 ]] && first=0 || printf ',\n'
     printf '    "%s": "%s"' "${k}" "${v}"
   done

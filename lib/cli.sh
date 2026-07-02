@@ -30,7 +30,7 @@ WEBAUDIT_VERSION="1.1.0"
 : "${WEBAUDIT_PROXY:=}"
 
 # Lista de hosts alvo e arquivo de scan.
-declare -ga WEBAUDIT_TARGETS=()
+declare -a WEBAUDIT_TARGETS=()
 WEBAUDIT_HOSTFILE=""
 
 cli::version() {

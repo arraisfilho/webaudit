@@ -17,6 +17,8 @@ markdown::_row() {
   local label="$1" key="$2" val
   val="$(utils::result_get "${key}")"
   val="${val//$'\n'/ }"
+  val="$(printf '%s' "${val}" | utils::trim)"
+  [[ -n "${val}" ]] || val="-"
   val="${val//|/\\|}"
   printf '| %s | %s |\n' "${label}" "${val}"
 }

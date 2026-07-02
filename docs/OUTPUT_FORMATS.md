@@ -5,10 +5,11 @@ selecionados por flag. O formato padrão é texto para terminal.
 
 ## Texto (padrão)
 
-Relatório legível para terminal, com rótulos alinhados e cores (desativáveis
-com `--no-color` ou `NO_COLOR=1`). O modo `-q/--quiet` reduz a saída a uma
-linha por host (`NOTA host`). O modo `-v/--verbose` inclui todos os campos
-coletados e a lista completa de CVEs.
+Relatório legível para terminal, organizado por seções, com rótulos alinhados,
+valores ausentes normalizados como `-`, status coloridos e CVEs em tabela
+compacta. As cores podem ser desativadas com `--no-color` ou `NO_COLOR=1`.
+O modo `-q/--quiet` reduz a saída a uma linha por host (`NOTA host`). O modo
+`-v/--verbose` inclui todos os campos coletados.
 
 ## `--json`
 

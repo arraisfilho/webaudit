@@ -22,25 +22,26 @@ __WEBAUDIT_HTTP_LOADED=1
 
 WEBAUDIT_RAW_HEADERS=""
 WEBAUDIT_BASE_URL=""
+WEBAUDIT_CURL_OPTS=()
 
-# http::_curl_base - array de opções comuns do curl.
+# http::_curl_base - popula WEBAUDIT_CURL_OPTS com opções comuns do curl.
 http::_curl_base() {
-  local -n _out="$1"
-  _out=(
+  WEBAUDIT_CURL_OPTS=(
     --silent --show-error
     --max-time "${WEBAUDIT_TIMEOUT}"
     --connect-timeout "${WEBAUDIT_TIMEOUT}"
     --user-agent "${WEBAUDIT_USER_AGENT}"
     --insecure   # a validação real de cert é feita pelo módulo cert (openssl)
   )
-  [[ -n "${WEBAUDIT_PROXY}" ]] && _out+=( --proxy "${WEBAUDIT_PROXY}" )
+  [[ -n "${WEBAUDIT_PROXY}" ]] && WEBAUDIT_CURL_OPTS+=( --proxy "${WEBAUDIT_PROXY}" )
 }
 
 # http::_probe <url> - faz uma requisição HEAD seguindo redirects e captura
 # métricas via -w. Ecoa uma linha "code|time|proto|url_efetiva|num_redirects".
 http::_probe() {
   local url="$1"
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   curl "${opts[@]}" --location --head \
     --write-out '%{http_code}|%{time_total}|%{http_version}|%{url_effective}|%{num_redirects}' \
     --output /dev/null "${url}" 2>/dev/null || printf '000|0|0||0'
@@ -49,14 +50,16 @@ http::_probe() {
 # http::_fetch_headers <url> - captura cabeçalhos brutos seguindo redirects.
 http::_fetch_headers() {
   local url="$1"
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   curl "${opts[@]}" --location --dump-header - --output /dev/null "${url}" 2>/dev/null || true
 }
 
 # http::_methods <url> - detecta métodos via OPTIONS (Allow) e testes diretos.
 http::_methods() {
   local url="$1"
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   local allow methods=""
 
   # 1) Header Allow via OPTIONS.
@@ -173,7 +176,8 @@ http::header_value() {
 # http::detect_http2 <host> <porta>
 http::detect_http2() {
   local host="$1" port="$2"
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   if curl "${opts[@]}" --http2 -I "https://${host}:${port}/" 2>/dev/null \
        | grep -qiE '^HTTP/2'; then
     utils::result_set http.http2 "Sim"
@@ -190,7 +194,8 @@ http::detect_http3() {
     utils::result_set http.http3 "Indisponivel (curl sem HTTP/3)"
     return 0
   fi
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   if curl "${opts[@]}" --http3-only -I "https://${host}:${port}/" 2>/dev/null \
        | grep -qiE '^HTTP/3'; then
     utils::result_set http.http3 "Sim"

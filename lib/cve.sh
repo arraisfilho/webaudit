@@ -33,6 +33,7 @@ __WEBAUDIT_CVE_LOADED=1
 
 WEBAUDIT_NVD_API="https://services.nvd.nist.gov/rest/json/cves/2.0"
 WEBAUDIT_OSV_API="https://api.osv.dev/v1/query"
+WEBAUDIT_NVD_HEADERS=()
 # Detalhe JSON do host corrente (resetado por alvo em cve::run).
 # Lido por json.sh (uso cruzado que o ShellCheck não enxerga).
 # shellcheck disable=SC2034
@@ -67,12 +68,16 @@ cve::run() {
 
   utils::debug "CVE: consultando ${sw} ${ver}"
 
-  local merged="" method="" cpe
+  local merged="" method="" cpe fetch_failed=0
   cpe="$(cve::_cpe "${sw}" "${ver}")"
 
   if [[ -n "${cpe}" ]]; then
-    merged="$(cve::_nvd_fetch_all virtualMatchString "${cpe}" || true)"
-    method="CPE"
+    if merged="$(cve::_nvd_fetch_all virtualMatchString "${cpe}")"; then
+      method="CPE"
+    else
+      fetch_failed=1
+      merged=""
+    fi
   fi
 
   # Fallback por keyword quando não há CPE ou a busca por CPE não retornou nada.
@@ -82,12 +87,20 @@ cve::run() {
   fi
   if [[ -z "${merged}" || "${total_probe}" == "0" ]]; then
     local kw; kw="$(cve::_nvd_keyword "${sw}") ${ver}"
-    merged="$(cve::_nvd_fetch_all keywordSearch "${kw}" || true)"
-    method="keyword"
+    if merged="$(cve::_nvd_fetch_all keywordSearch "${kw}")"; then
+      method="keyword"
+    else
+      fetch_failed=1
+      merged=""
+    fi
   fi
 
   if [[ -z "${merged}" ]]; then
-    utils::result_set cve.status "Nenhuma conhecida"
+    if (( fetch_failed == 1 )); then
+      utils::result_set cve.status "Consulta de CVE indisponivel (NVD sem resposta valida)"
+    else
+      utils::result_set cve.status "Nenhuma conhecida"
+    fi
     utils::result_set cve.count "0"
     return 0
   fi
@@ -143,16 +156,19 @@ cve::_nvd_fetch_all() {
   utils::has jq || return 1
 
   local enc; enc="$(cve::_urlencode "${val}")"
-  local page="${WEBAUDIT_NVD_PAGE:-2000}"
+  local page; page="$(cve::_nvd_page_size)"
   local idx=0 total=-1 got=0
   local arrays=""
-  local -a hdr; cve::_nvd_headers hdr
+  cve::_nvd_headers
 
   while :; do
     local url body
     url="${WEBAUDIT_NVD_API}?${param}=${enc}&resultsPerPage=${page}&startIndex=${idx}&noRejected"
-    body="$(cve::_curl "${url}" "${hdr[@]}")"
-    [[ -n "${body}" ]] || break
+    if (( ${#WEBAUDIT_NVD_HEADERS[@]} > 0 )); then
+      body="$(cve::_nvd_fetch_page "${url}" "${WEBAUDIT_NVD_HEADERS[@]}")" || return 1
+    else
+      body="$(cve::_nvd_fetch_page "${url}")" || return 1
+    fi
 
     if (( total < 0 )); then
       total="$(printf '%s' "${body}" | jq -r '.totalResults // 0' 2>/dev/null || echo 0)"
@@ -169,10 +185,11 @@ cve::_nvd_fetch_all() {
 
     (( n == 0 )) && break
     (( total >= 0 && idx >= total )) && break
-    (( WEBAUDIT_CVE_MAX > 0 && got >= WEBAUDIT_CVE_MAX )) && break
+    (( ${WEBAUDIT_CVE_MAX:-0} > 0 && got >= ${WEBAUDIT_CVE_MAX:-0} )) && break
     cve::_sleep
   done
 
+  (( total >= 0 )) || return 1
   merged="$(printf '%s' "${arrays}" | jq -s -c --argjson total "${total:-0}" \
     '{totalResults: $total, vulnerabilities: (add // [])}' 2>/dev/null || true)"
   [[ -n "${merged}" ]] || return 1
@@ -180,10 +197,38 @@ cve::_nvd_fetch_all() {
   printf '%s' "${merged}"
 }
 
-# cve::_nvd_headers <nome_do_array> - popula headers (apiKey se houver chave).
+# cve::_nvd_page_size - tamanho de página, respeitando --cve-max quando menor.
+cve::_nvd_page_size() {
+  local page="${WEBAUDIT_NVD_PAGE:-2000}" max="${WEBAUDIT_CVE_MAX:-0}"
+  [[ "${page}" =~ ^[0-9]+$ ]] || page=2000
+  [[ "${max}" =~ ^[0-9]+$ ]] || max=0
+  if (( max > 0 && max < page )); then
+    page="${max}"
+  fi
+  (( page > 0 )) || page=1
+  printf '%s' "${page}"
+}
+
+# cve::_nvd_fetch_page <url> <headers...> - baixa e valida uma página da NVD.
+cve::_nvd_fetch_page() {
+  local url="$1"; shift
+  local body attempt
+  for attempt in 1 2; do
+    body="$(cve::_curl "${url}" "$@")"
+    if printf '%s' "${body}" | jq -e \
+        'has("totalResults") and has("vulnerabilities")' >/dev/null 2>&1; then
+      printf '%s' "${body}"
+      return 0
+    fi
+    [[ ${attempt} -lt 2 ]] && cve::_sleep
+  done
+  return 1
+}
+
+# cve::_nvd_headers - popula WEBAUDIT_NVD_HEADERS (apiKey se houver chave).
 cve::_nvd_headers() {
-  local -n _h="$1"; _h=()
-  [[ -n "${WEBAUDIT_NVD_API_KEY:-}" ]] && _h=(-H "apiKey: ${WEBAUDIT_NVD_API_KEY}")
+  WEBAUDIT_NVD_HEADERS=()
+  [[ -n "${WEBAUDIT_NVD_API_KEY:-}" ]] && WEBAUDIT_NVD_HEADERS=(-H "apiKey: ${WEBAUDIT_NVD_API_KEY}")
 }
 
 # cve::_sleep - respeita o rate limit oficial da NVD.
@@ -335,7 +380,8 @@ cve::_osv_name() {
 # cve::_curl <url> <headers...> - GET/POST com timeout e headers extras.
 cve::_curl() {
   local url="$1"; shift
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   curl "${opts[@]}" "$@" "${url}" 2>/dev/null || true
 }
 

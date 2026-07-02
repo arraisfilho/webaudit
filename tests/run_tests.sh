@@ -81,6 +81,38 @@ if utils::result_has foo.bar; then _ok "result_has verdadeiro"; else _no "result
 if utils::result_has nao.existe; then _no "result_has falso"; else _ok "result_has falso"; fi
 
 # ---------------------------------------------------------------------------
+section "renderizadores report/json"
+# ---------------------------------------------------------------------------
+# shellcheck source=/dev/null
+source "${LIB}/report.sh"
+# shellcheck source=/dev/null
+source "${LIB}/json.sh"
+utils::result_reset
+utils::result_set dns.ipv4 "93.184.216.34"
+utils::result_set dns.status "OK"
+utils::result_set tcp.status "OK"
+utils::result_set http.status "OK"
+utils::result_set https.status "OK"
+utils::result_set https.code "200"
+utils::result_set tls.rating "OK"
+utils::result_set cert.status "OK"
+utils::result_set sec.rating "OK"
+utils::result_set cve.status "Nenhuma conhecida"
+WEBAUDIT_CVE_JSON="[]"
+_old_quiet="${WEBAUDIT_QUIET}"
+WEBAUDIT_QUIET=0
+_txt="$(report::text exemplo.com 1.00)"
+WEBAUDIT_QUIET="${_old_quiet}"
+assert_contains "Disponibilidade" "${_txt}" "report text tem secoes"
+assert_contains "Codigo HTTPS" "${_txt}" "report text usa rotulos alinhaveis"
+_json="$(json::emit exemplo.com 1.00)"
+assert_contains '"results"' "${_json}" "json contem objeto results"
+if utils::has jq; then
+  assert_eq "93.184.216.34" "$(printf '%s' "${_json}" | jq -r '.results["dns.ipv4"]')" "json aninha resultados"
+  assert_eq "null" "$(printf '%s' "${_json}" | jq -r '."dns.ipv4" // "null"')" "json nao duplica resultados no topo"
+fi
+
+# ---------------------------------------------------------------------------
 section "cache get/set com TTL"
 # ---------------------------------------------------------------------------
 export WEBAUDIT_CACHE_ENABLED=1
@@ -99,6 +131,22 @@ assert_contains "${WEBAUDIT_OS}" "linux macos bsd unknown" "detect_os define val
 if utils::has bash; then _ok "has encontra bash"; else _no "has encontra bash"; fi
 
 # ---------------------------------------------------------------------------
+section "deps::check_runtime helpers"
+# ---------------------------------------------------------------------------
+# shellcheck source=/dev/null
+source "${LIB}/deps.sh"
+if deps::_check_bash_version; then _ok "bash atende versao minima"; else _no "bash atende versao minima"; fi
+assert_eq "curl, openssl, jq" "$(deps::_join ', ' curl openssl jq)" "deps join lista comandos"
+_old_os="${WEBAUDIT_OS}"
+WEBAUDIT_OS=macos
+_mac_hints="$(deps::_print_install_hints 2>&1 >/dev/null)"
+assert_contains "brew install" "${_mac_hints}" "deps sugere Homebrew no macOS"
+WEBAUDIT_OS=linux
+_linux_hints="$(deps::_print_install_hints 2>&1 >/dev/null)"
+assert_contains "apt-get install" "${_linux_hints}" "deps sugere apt no Linux"
+WEBAUDIT_OS="${_old_os}"
+
+# ---------------------------------------------------------------------------
 section "dns::detect_cdn"
 # ---------------------------------------------------------------------------
 # shellcheck source=/dev/null
@@ -106,6 +154,11 @@ source "${LIB}/dns.sh"
 assert_eq "Cloudflare" "$(dns::detect_cdn 'x.cloudflare.net')" "cdn cloudflare"
 assert_eq "Akamai" "$(dns::detect_cdn 'e123.akamaiedge.net')" "cdn akamai"
 assert_eq "Amazon CloudFront" "$(dns::detect_cdn 'd1.cloudfront.net')" "cdn cloudfront"
+if dns::is_ipv4_literal "10.1.1.223"; then _ok "detecta IPv4 literal"; else _no "detecta IPv4 literal"; fi
+utils::result_reset
+dns::run "10.1.1.223"
+assert_eq "OK" "$(utils::result_get dns.status)" "dns literal IPv4 fica OK"
+assert_eq "10.1.1.223" "$(utils::result_get dns.ipv4)" "dns literal IPv4 preserva endereco"
 
 # ---------------------------------------------------------------------------
 section "server::detect_software / detect_os"
@@ -165,6 +218,24 @@ source "${LIB}/cve.sh"
 assert_eq "cpe:2.3:a:f5:nginx:1.20.0" "$(cve::_cpe nginx 1.20.0)" "cpe nginx -> f5:nginx"
 assert_eq "cpe:2.3:a:apache:http_server:2.4.57" "$(cve::_cpe Apache 2.4.57)" "cpe apache http_server"
 assert_eq "" "$(cve::_cpe softwaredesconhecido 1.0)" "cpe vazio p/ desconhecido (fallback keyword)"
+WEBAUDIT_CVE_MAX=20 WEBAUDIT_NVD_PAGE=2000
+assert_eq "20" "$(cve::_nvd_page_size)" "nvd page respeita cve-max"
+WEBAUDIT_CVE_MAX=0 WEBAUDIT_NVD_PAGE=2000
+assert_eq "2000" "$(cve::_nvd_page_size)" "nvd page usa maximo quando cve-max ilimitado"
+WEBAUDIT_CVE_MAX=500
+
+(
+  cve::_nvd_fetch_page() { printf '{"totalResults":0,"vulnerabilities":[]}'; }
+  cve::_nvd_fetch_all keywordSearch "apache 2.4.18" >/dev/null
+)
+assert_rc "0" "$?" "nvd fetch funciona sem api key"
+
+(
+  cve::_curl() { printf ''; }
+  cve::_sleep() { :; }
+  cve::_nvd_fetch_page "https://nvd.example.invalid" >/dev/null 2>&1
+)
+assert_rc "1" "$?" "nvd page vazia falha em vez de virar zero CVEs"
 
 if utils::has jq; then
   _merged='{"totalResults":2,"vulnerabilities":[{"cve":{"id":"CVE-2021-23017","published":"2021-06-01T00:00Z","lastModified":"2024-01-01T00:00Z","vulnStatus":"Analyzed","metrics":{"cvssMetricV31":[{"cvssData":{"version":"3.1","baseScore":7.7,"baseSeverity":"HIGH","vectorString":"CVSS:3.1/AV:N"}}]},"weaknesses":[{"description":[{"lang":"en","value":"CWE-193"}]}],"descriptions":[{"lang":"en","value":"nginx resolver off-by-one"}],"configurations":[{"nodes":[{"cpeMatch":[{"vulnerable":true,"criteria":"cpe:2.3:a:f5:nginx:*:*:*:*:*:*:*:*","versionEndExcluding":"1.20.1"}]}]}],"references":[{"url":"https://example/adv"}]}},{"cve":{"id":"CVE-2000-0001","published":"2000-01-01T00:00Z","lastModified":"2000-01-01T00:00Z","vulnStatus":"Analyzed","metrics":{"cvssMetricV2":[{"baseSeverity":"LOW","cvssData":{"version":"2.0","baseScore":2.1,"vectorString":"AV:L"}}]},"descriptions":[{"lang":"en","value":"exemplo antigo"}]}}]}'

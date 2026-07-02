@@ -74,6 +74,24 @@ dns::detect_cdn() {
   esac
 }
 
+dns::is_ipv4_literal() {
+  local ip="$1" part
+  [[ "${ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+  local old_ifs="${IFS}"
+  IFS='.'
+  for part in ${ip}; do
+    [[ "${part}" =~ ^[0-9]+$ ]] || { IFS="${old_ifs}"; return 1; }
+    (( part <= 255 )) || { IFS="${old_ifs}"; return 1; }
+  done
+  IFS="${old_ifs}"
+  return 0
+}
+
+dns::is_ipv6_literal() {
+  local ip="$1"
+  [[ "${ip}" == *:* && "${ip}" =~ ^[0-9A-Fa-f:]+$ ]]
+}
+
 # dns::run <host> - executa toda a coleta DNS.
 dns::run() {
   local host="$1"
@@ -81,6 +99,32 @@ dns::run() {
 
   local t0 t1 elapsed
   t0="$(dns::_millis)"
+
+  if dns::is_ipv4_literal "${host}" || dns::is_ipv6_literal "${host}"; then
+    t1="$(dns::_millis)"
+    elapsed="$(dns::_delta "${t0}" "${t1}")"
+
+    if dns::is_ipv4_literal "${host}"; then
+      utils::result_set dns.ipv4 "${host}"
+      utils::result_set dns.ipv6 ""
+      local ptr; ptr="$(dns::reverse "${host}")"
+      utils::result_set dns.ptr "${ptr}"
+      utils::result_set dns.cdn "$(dns::detect_cdn "${ptr}")"
+    else
+      utils::result_set dns.ipv4 ""
+      utils::result_set dns.ipv6 "${host}"
+      utils::result_set dns.cdn ""
+    fi
+
+    utils::result_set dns.cname ""
+    utils::result_set dns.ns ""
+    utils::result_set dns.mx ""
+    utils::result_set dns.txt_count "0"
+    utils::result_set dns.ttl ""
+    utils::result_set dns.time_ms "${elapsed}"
+    utils::result_set dns.status "OK"
+    return 0
+  fi
 
   local ipv4 ipv6 cname mx txt ns ttl
   # Cache por registro.

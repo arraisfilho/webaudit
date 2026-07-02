@@ -19,7 +19,8 @@ __WEBAUDIT_FINGERPRINT_LOADED=1
 # fingerprint::_probe_404 <base_url> - captura cabeçalhos de uma URL inexistente.
 fingerprint::_probe_404() {
   local base="$1"
-  local -a opts; http::_curl_base opts
+  http::_curl_base
+  local -a opts=("${WEBAUDIT_CURL_OPTS[@]}")
   local url="${base%/}/webaudit-nonexistent-$RANDOM"
   curl "${opts[@]}" --dump-header - --output /dev/null "${url}" 2>/dev/null || true
 }

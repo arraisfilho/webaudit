@@ -23,27 +23,37 @@ html::doc_header() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WebAudit - Relatorio</title>
 <style>
-  :root{--ok:#1a7f37;--warn:#9a6700;--crit:#cf222e;--bg:#f6f8fa;--fg:#1f2328;--mut:#57606a;--br:#d0d7de}
+  :root{--ok:#16833a;--warn:#b26a00;--crit:#d1242f;--bg:#f4f6f8;--panel:#fff;--fg:#111827;--mut:#667085;--br:#d9dee7;--accent:#155eef}
   *{box-sizing:border-box}
-  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  header{background:#0d1117;color:#fff;padding:20px 24px}
-  header h1{margin:0;font-size:20px}
-  header .sub{color:#8b949e;font-size:13px;margin-top:4px}
-  main{max-width:960px;margin:24px auto;padding:0 16px}
-  .card{background:#fff;border:1px solid var(--br);border-radius:8px;margin-bottom:20px;overflow:hidden}
-  .card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--br);font-size:16px;display:flex;justify-content:space-between;align-items:center}
-  .badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;color:#fff}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg);line-height:1.45}
+  header{background:#111827;color:#fff;padding:22px 28px;border-bottom:4px solid var(--accent)}
+  header h1{margin:0;font-size:22px;letter-spacing:0}
+  header .sub{color:#cbd5e1;font-size:13px;margin-top:4px}
+  main{max-width:1120px;margin:26px auto;padding:0 18px}
+  .card{background:var(--panel);border:1px solid var(--br);border-radius:8px;margin-bottom:22px;overflow:hidden;box-shadow:0 10px 24px rgba(15,23,42,.07)}
+  .card h2{margin:0;padding:16px 18px;border-bottom:1px solid var(--br);font-size:17px;display:flex;gap:12px;justify-content:space-between;align-items:center}
+  .host{min-width:0;overflow-wrap:anywhere}
+  .badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;color:#fff;letter-spacing:0}
   .badge.OK{background:var(--ok)}.badge.WARNING{background:var(--warn)}.badge.CRITICAL{background:var(--crit)}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
-  section{padding:12px 18px}
-  section h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:0 0 8px}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+  .grid section:nth-child(odd){border-right:1px solid var(--br)}
+  section{padding:16px 18px}
+  section h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:0 0 10px}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  td{padding:4px 0;vertical-align:top}
+  td{padding:7px 0;vertical-align:top;border-top:1px solid #eef1f5}
+  tr:first-child td{border-top:0}
   td.k{color:var(--mut);width:44%}
   td.v{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word}
-  .cve td{border-top:1px solid var(--br);font-size:13px}
-  footer{max-width:960px;margin:0 auto 40px;padding:0 16px;color:var(--mut);font-size:12px}
+  .cve td{font-size:13px}
+  footer{max-width:1120px;margin:0 auto 42px;padding:0 18px;color:var(--mut);font-size:12px}
   a{color:#0969da}
+  @media (max-width:760px){
+    header{padding:18px}
+    main{margin:18px auto;padding:0 12px}
+    .grid{grid-template-columns:1fr}
+    .grid section:nth-child(odd){border-right:0;border-bottom:1px solid var(--br)}
+    .card h2{align-items:flex-start;flex-direction:column}
+  }
 </style>
 </head>
 <body>
@@ -61,7 +71,9 @@ html::doc_footer() {
 # html::_kv <rotulo> <chave> - linha de tabela.
 html::_kv() {
   local label="$1" key="$2" val
-  val="$(utils::html_escape "$(utils::result_get "${key}" | tr '\n' ' ')")"
+  val="$(utils::result_get "${key}" | tr '\n' ' ' | utils::trim)"
+  [[ -n "${val}" ]] || val="-"
+  val="$(utils::html_escape "${val}")"
   printf '<tr><td class="k">%s</td><td class="v">%s</td></tr>\n' "${label}" "${val}"
 }
 
@@ -71,7 +83,7 @@ html::emit() {
   overall="$(report::overall)"
 
   printf '<div class="card">\n'
-  printf '<h2>%s <span class="badge %s">%s</span></h2>\n' \
+  printf '<h2><span class="host">%s</span> <span class="badge %s">%s</span></h2>\n' \
     "$(utils::html_escape "${host}")" "${overall}" "${overall}"
 
   printf '<div class="grid">\n'

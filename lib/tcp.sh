@@ -22,14 +22,29 @@ tcp::connect() {
   local t0 t1
   t0="$(tcp::_millis)"
 
-  # Subshell com /dev/tcp; timeout aplicado externamente.
-  if utils::run_timeout "${WEBAUDIT_TIMEOUT}" bash -c \
-      "exec 3<>/dev/tcp/${host}/${port}" 2>/dev/null; then
+  if tcp::_connect_dev_tcp "${host}" "${port}" || tcp::_connect_nc "${host}" "${port}"; then
     t1="$(tcp::_millis)"
     printf '%s' "$(( t1 - t0 ))"
     return 0
   fi
   printf ''
+  return 1
+}
+
+tcp::_connect_dev_tcp() {
+  local host="$1" port="$2"
+  # Subshell com /dev/tcp; timeout aplicado externamente.
+  utils::run_timeout "${WEBAUDIT_TIMEOUT}" bash -c \
+    "exec 3<>/dev/tcp/${host}/${port}" 2>/dev/null
+}
+
+tcp::_connect_nc() {
+  local host="$1" port="$2"
+  utils::has nc || return 1
+
+  # BSD/macOS nc usa -G para timeout de conexão; GNU/OpenBSD geralmente usa -w.
+  nc -z -G "${WEBAUDIT_TIMEOUT}" "${host}" "${port}" >/dev/null 2>&1 && return 0
+  nc -z -w "${WEBAUDIT_TIMEOUT}" "${host}" "${port}" >/dev/null 2>&1 && return 0
   return 1
 }
 

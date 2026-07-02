@@ -32,6 +32,8 @@ utils::detect_os
 
 # shellcheck source=lib/cli.sh
 source "${WEBAUDIT_LIB}/cli.sh"
+# shellcheck source=lib/deps.sh
+source "${WEBAUDIT_LIB}/deps.sh"
 
 # Carrega config.conf (se existir) ANTES de aplicar as flags, para que a linha
 # de comando tenha precedência.
@@ -56,6 +58,12 @@ unset _m
 # ---------------------------------------------------------------------------
 webaudit::on_error() {
   local code=$? line=${1:-?}
+  # Muitas sondagens legítimas rodam dentro de command substitutions e usam
+  # status != 0 como "não encontrado"/"não suportado". Com errtrace, o trap
+  # também chega nesses subshells; não trate esses casos como erro interno.
+  if (( ${BASH_SUBSHELL:-0} > 0 )); then
+    return 0
+  fi
   utils::error "Erro interno na linha ${line} (exit ${code})"
   exit 3
 }
@@ -126,7 +134,7 @@ webaudit::audit_one() {
   t1="$(date +%s)"
   # Tempo com 2 casas (usa awk se disponível).
   if utils::has awk; then
-    elapsed="$(awk -v a="${t0}" -v b="${t1}" 'BEGIN{printf "%.2f", b-a}')"
+    elapsed="$(LC_ALL=C awk -v a="${t0}" -v b="${t1}" 'BEGIN{printf "%.2f", b-a}')"
   else
     elapsed="$(( t1 - t0 ))"
   fi
@@ -199,6 +207,9 @@ main() {
   # 2) Flags (precedência sobre config).
   cli::parse "$@"
   cli::validate
+  if ! deps::check_runtime; then
+    exit 3
+  fi
 
   # 3) Preparação de cache/log.
   mkdir -p "${WEBAUDIT_CACHE_DIR}" 2>/dev/null || true

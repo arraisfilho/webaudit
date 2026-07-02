@@ -56,7 +56,7 @@ CVEs conhecidas — tudo a partir da linha de comando, sem runtime externo.
 
 | Ferramenta | Uso                                  |
 |------------|--------------------------------------|
-| `bash`     | 4.0+ (recomendado 5.x)               |
+| `bash`     | 3.2+ (macOS padrão); 5.x recomendado |
 | `curl`     | Requisições HTTP/HTTPS               |
 | `openssl`  | Handshake TLS e análise de cadeia    |
 
@@ -68,6 +68,12 @@ CVEs conhecidas — tudo a partir da linha de comando, sem runtime externo.
 | `dig`/`host` | Consultas DNS mais completas (fallback: `getent`)  |
 | `timeout`/`gtimeout` | Limite de tempo por operação               |
 | `column`   | Alinhamento de algumas saídas                        |
+
+Ao iniciar uma auditoria, o WebAudit valida as dependências obrigatórias. Se
+algo estiver ausente, ele interrompe a execução e mostra comandos sugeridos
+para instalação no macOS (Homebrew) ou Linux (Debian/Ubuntu, Fedora/RHEL e
+Alpine). Dependências opcionais ausentes geram aviso, mas a auditoria continua
+com funcionalidade reduzida.
 
 ## Instalação
 
@@ -112,33 +118,60 @@ webaudit -v -t 15 exemplo.com:8443
 ## Exemplo de saída
 
 ```
-══════════════════════════════════════════════
+────────────────────────────────────────────────────────────
+WebAudit  cloudflare.com  OK
+────────────────────────────────────────────────────────────
 
-Host............ cloudflare.com
-IPv4............ 104.16.132.229 104.16.133.229
-IPv6............
+Rede
+  Host                 cloudflare.com
+  IPv4                 104.16.132.229 104.16.133.229
+  IPv6                 -
+  CDN                  Cloudflare
+  DNS                  OK
 
-HTTP............ OK
-HTTPS........... OK
+Disponibilidade
+  HTTP                 OK
+  Codigo HTTP          301
+  HTTPS                OK
+  Codigo HTTPS         200
+  Redirects HTTPS      1
+  Loop redirect        Nao
 
-TLS............. TLSv1.3
-Cipher.......... TLS_AES_256_GCM_SHA384
+TLS e certificado
+  TLS                  TLSv1.3
+  Cipher               TLS_AES_256_GCM_SHA384
+  ALPN                 h2
+  Forward secrecy      Sim
+  Certificado          OK
+  Emissor              DigiCert Inc
+  Chave                ECDSA 256 bits
+  Expira em            250 dias
+  Hostname valido      Sim
 
-Certificado..... OK
-Emissor......... (emissor do certificado)
-Algoritmo....... ECDSA256
-Expira.em....... 250 dias
+Servidor
+  Software             cloudflare
+  Versao               desconhecida
+  Sistema              desconhecido
+  HTTP/2               Sim
+  HTTP/3               Sim
+  Fingerprint          Cloudflare(edge) http2 (conf: alta)
 
-Servidor........ cloudflare
-Fingerprint..... Cloudflare(edge) http2
+Seguranca
+  HSTS                 max-age=31536000
+  CSP                  -
+  X-Frame-Options      -
+  Referrer-Policy      strict-origin-when-cross-origin
+  Pontuacao            10/11
+  Ultima versao        desconhecida
+  Status versao        Versao mascarada - nao foi possivel comparar
 
-HSTS............ OK
-CSP............. OK
-Seguranca....... 10/11
+Vulnerabilidades
+  CVEs                 Nenhuma conhecida
 
-Tempo........... 1.00 segundos
+Execucao
+  Tempo                1.00 segundos
 
-══════════════════════════════════════════════
+────────────────────────────────────────────────────────────
 ```
 
 > Os valores exatos variam conforme o alvo e o ambiente de rede.

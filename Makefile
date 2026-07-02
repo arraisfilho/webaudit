@@ -73,7 +73,8 @@ release: check
 	@echo ">> Gerando $(DIST)..."
 	@tar --exclude='cache/*' --exclude='.git' -czf "$(DIST)" \
 		$(MAIN) lib docs tests Makefile README.md CHANGELOG.md \
-		CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md LICENSE .gitignore .shellcheckrc config.conf
+		CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md LICENSE \
+		.github .gitignore .shellcheckrc config.conf
 	@echo "OK: $(DIST) gerado."
 
 ## help: lista os alvos
