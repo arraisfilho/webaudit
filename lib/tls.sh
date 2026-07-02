@@ -23,7 +23,14 @@ WEBAUDIT_TLS_DUMP=""
 tls::_connect() {
   local host="$1" port="$2"; shift 2
   printf 'Q\n' | utils::run_timeout "${WEBAUDIT_TIMEOUT}" \
-    openssl s_client -connect "${host}:${port}" -servername "${host}" "$@" 2>/dev/null || true
+	    openssl s_client -connect "${host}:${port}" -servername "${host}" "$@" 2>/dev/null || true
+}
+
+tls::_contains_i() {
+  local haystack needle
+  haystack="$(printf '%s' "$1" | utils::lower)"
+  needle="$(printf '%s' "$2" | utils::lower)"
+  [[ "${haystack}" == *"${needle}"* ]]
 }
 
 # tls::_supports <host> <porta> <flag_versao> - testa se uma versão TLS conecta.
@@ -31,7 +38,7 @@ tls::_supports() {
   local host="$1" port="$2" flag="$3"
   local out
   out="$(tls::_connect "${host}" "${port}" "${flag}")"
-  if printf '%s' "${out}" | grep -qE 'BEGIN CERTIFICATE|New, TLS'; then
+  if [[ "${out}" == *"BEGIN CERTIFICATE"* || "${out}" == *"New, TLS"* ]]; then
     return 0
   fi
   return 1
@@ -143,7 +150,7 @@ tls::_check_reuse() {
   local host="$1" port="$2" out
   out="$(printf 'Q\n' | utils::run_timeout "${WEBAUDIT_TIMEOUT}" \
     openssl s_client -connect "${host}:${port}" -servername "${host}" -reconnect 2>/dev/null || true)"
-  if printf '%s' "${out}" | grep -qiE 'Reused'; then
+  if tls::_contains_i "${out}" "Reused"; then
     utils::result_set tls.session_reuse "Sim"
   else
     utils::result_set tls.session_reuse "Nao"

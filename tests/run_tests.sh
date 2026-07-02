@@ -170,6 +170,17 @@ assert_eq "Apache" "$(server::detect_software 'Apache/2.4.57 (Ubuntu)')" "detect
 assert_contains "Ubuntu" "$(server::detect_os 'Apache/2.4.57 (Ubuntu)')" "detecta ubuntu"
 
 # ---------------------------------------------------------------------------
+section "tls helpers"
+# ---------------------------------------------------------------------------
+# shellcheck source=/dev/null
+source "${LIB}/tls.sh"
+if tls::_contains_i "New, TLSv1.2, Cipher is X"$'\n'"Reused, TLSv1.2" "reused"; then
+  _ok "tls contains case-insensitive sem pipe"
+else
+  _no "tls contains case-insensitive sem pipe"
+fi
+
+# ---------------------------------------------------------------------------
 section "cli::parse - flags básicas"
 # ---------------------------------------------------------------------------
 # shellcheck source=/dev/null

@@ -54,6 +54,8 @@ e o projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   Bash 3.2 com `set -u`.
 - Tempo final passa a ser formatado com locale `C`, mantendo ponto decimal em
   logs e relatórios.
+- Checagem de reuso de sessão TLS deixa de usar `grep -q` em pipe, evitando
+  aviso `printf: write error: Broken pipe` em handshakes grandes.
 - `versions::_cmp` deixa de retornar `-1` (interpretado como opção por
   `printf` em alguns shells), passando a usar `lt`/`eq`/`gt`. Corrige o erro
   "printf: -1: invalid option" e o campo Status vazio na comparação de versão.
